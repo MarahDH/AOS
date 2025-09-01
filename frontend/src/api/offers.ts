@@ -1,5 +1,6 @@
 import { OffersModel } from "@interfaces/Offers.model";
 import { handleRequest } from "./handler/handleRequest";
+import { axiosInstance } from "./handler/config";
 
 export class OffersApi {
   static async getAllOffers() {
@@ -66,17 +67,38 @@ export class OffersApi {
 
   // Export
   static async export(offerId: number, template?: string) {
-    let url = `${import.meta.env.VITE_API_URL}/offers/${offerId}/export`;
-    if (template) {
-      url += `?template=${encodeURIComponent(template)}`;
-    }
+    try {
+      let url = `/offers/${offerId}/export`;
+      if (template) {
+        url += `?template=${encodeURIComponent(template)}`;
+      }
 
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `Offer_${offerId}.docx`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const response = await axiosInstance.get(url, {
+        responseType: 'blob', // Important for file downloads
+        headers: {
+          'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        }
+      });
+
+      // Create blob and download
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      });
+      
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", `Offer_${offerId}.docx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Export failed:', error);
+      throw error;
+    }
   }
 
   static async getEditableFields(offerId: number) {

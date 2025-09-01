@@ -37,6 +37,9 @@ class WordExportService
         $outputPath = storage_path("app/public/{$outputFilename}.docx");
         $template->saveAs($outputPath);
 
-        return response()->download($outputPath)->deleteFileAfterSend();
+        return response()->download($outputPath, "{$outputFilename}.docx", [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'attachment; filename="' . "{$outputFilename}.docx" . '"',
+        ])->deleteFileAfterSend();
     }
 }
