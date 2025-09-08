@@ -136,8 +136,8 @@ return new class extends Migration {
 
             // timestamps if needed (created_at, updated_at)
             // $table->foreign('general_created_by_user_id')->references('id')->on('users')->restrictOnDelete()->restrictOnUpdate();
-            $table->foreign('runningcard_hourlyrecording_entrydriver_user_id')->references('id')->on('users')->restrictOnDelete()->restrictOnUpdate();
-            $table->foreign('runningcard_hourlyrecording_toolmaker_user_id')->references('id')->on('users')->restrictOnDelete()->restrictOnUpdate();
+            $table->foreign('runningcard_hourlyrecording_entrydriver_user_id')->references('id')->on('users')->nullOnDelete()->restrictOnUpdate();
+            $table->foreign('runningcard_hourlyrecording_toolmaker_user_id')->references('id')->on('users')->nullOnDelete()->restrictOnUpdate();
             $table->timestamps();
         });
     }

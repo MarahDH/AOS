@@ -147,6 +147,9 @@ const CostOverviewCard: FC = () => {
 
       _pricing_costs_yearly_fixcosts:
         offerDetails?._pricing_costs_yearly_fixcosts ?? "",
+
+      pricing_costs_calc_price_additional_lfm_desc:
+        offerDetails?.pricing_costs_calc_price_additional_lfm_desc ?? "",
     },
     enableReinitialize: true,
     onSubmit: () => {},

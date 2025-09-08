@@ -55,9 +55,15 @@ export async function handleRequest<T = any>({
       const { status, data } = error.response;
 
       if (status === 401 || status === 419) {
-        enqueueSnackbar("Sitzung abgelaufen. Bitte erneut anmelden.", {
-          variant: "warning",
-        });
+        // For login endpoints, preserve the error data
+        if (endpoint === "/login" || endpoint.includes("/auth")) {
+          const errorMessage = extractErrorMessage(data);
+          const error = new Error(errorMessage);
+          (error as any).response = { data, status };
+          throw error;
+        }
+        
+        // For other endpoints, handle unauthorized normally
         if (typeof onUnauthorized === "function") {
           onUnauthorized();
         }
@@ -78,6 +84,21 @@ export async function handleRequest<T = any>({
 }
 
 function extractErrorMessage(data: any): string {
+  // Handle validation errors (Laravel style)
+  if (data?.data && typeof data.data === 'object') {
+    // Check if it's a validation error with field-specific messages
+    const fieldErrors = Object.values(data.data).flat();
+    if (fieldErrors.length > 0 && typeof fieldErrors[0] === 'string') {
+      return fieldErrors[0];
+    }
+    
+    // Check if it's a nested message structure
+    if (data.data.message) {
+      return data.data.message;
+    }
+  }
+  
+  // Handle regular error messages
   return (
     data?.message ||
     data?.data?.message ||

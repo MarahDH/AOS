@@ -1,6 +1,7 @@
-import { FunctionComponent } from "react";
+import { FunctionComponent, useState } from "react";
 import { useField } from "formik";
-import { FormControl, TextField, TextFieldProps } from "@mui/material";
+import { FormControl, TextField, TextFieldProps, InputAdornment, IconButton } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { formatNumberToGerman } from "@utils/formatNumbers";
 
 interface FormInputFieldProps extends Omit<TextFieldProps, "name" | "variant"> {
@@ -22,12 +23,13 @@ const FormInputField: FunctionComponent<FormInputFieldProps> = ({
   ...props
 }) => {
   const [field, meta] = useField(name);
+  const [showPassword, setShowPassword] = useState(false);
 
   const configTextField: TextFieldProps = {
     ...field,
     ...props,
     fullWidth: true,
-    type,
+    type: type === "password" && showPassword ? "text" : type,
     required,
     disabled,
     onChange: onChange || field.onChange,
@@ -38,10 +40,28 @@ const FormInputField: FunctionComponent<FormInputFieldProps> = ({
     hiddenLabel: hiddenLabel,
   };
 
+  const handleTogglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
     <FormControl fullWidth variant="outlined">
       <TextField
         {...configTextField}
+        InputProps={{
+          endAdornment: type === "password" ? (
+            <InputAdornment position="end">
+              <IconButton
+                aria-label="toggle password visibility"
+                onClick={handleTogglePasswordVisibility}
+                edge="end"
+                size="small"
+              >
+                {showPassword ? <VisibilityOff /> : <Visibility />}
+              </IconButton>
+            </InputAdornment>
+          ) : undefined,
+        }}
         sx={{
           ".MuiInputBase-input": {
             padding: hiddenLabel ? "5px" : null,

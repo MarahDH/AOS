@@ -23,4 +23,12 @@ class OfferRawMaterialService
     {
         $this->repository->recalculateShares($offerId);
     }
+
+    /**
+     * Sync prices from raw_materials to offers_raw_materials for a specific offer
+     */
+    public function syncPricesFromRawMaterials(int $offerId): void
+    {
+        $this->repository->syncPricesFromRawMaterials($offerId);
+    }
 }

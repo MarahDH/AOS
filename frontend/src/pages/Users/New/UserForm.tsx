@@ -77,14 +77,24 @@ const UserForm = ({ formik, mode }: Props) => {
         onChange={handleChange}
       />
       {mode === FormMode.CREATE && (
-        <FormInputField
-          name="password"
-          label="Passwort"
-          type="password"
-          required
-          value={values.password}
-          onChange={handleChange}
-        />
+        <>
+          <FormInputField
+            name="password"
+            label="Passwort"
+            type="password"
+            required
+            value={values.password}
+            onChange={handleChange}
+          />
+          <FormInputField
+            name="confirmPassword"
+            label="Passwort bestätigen"
+            type="password"
+            required
+            value={values.confirmPassword}
+            onChange={handleChange}
+          />
+        </>
       )}
 
       <FormSelectField

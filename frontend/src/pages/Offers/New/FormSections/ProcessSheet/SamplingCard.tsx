@@ -76,7 +76,7 @@ const SamplingCard: FunctionComponent = () => {
             />
           </Grid>
           <Grid size={{ xs: 12, md: 2.4 }}>
-            <FormIntField
+            <FormTextField
               name="runningcard_sampling_packing"
               label="Verpackung"
               disabled={

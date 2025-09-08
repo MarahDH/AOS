@@ -46,6 +46,7 @@ const UsersPage: FunctionComponent = () => {
       name: user.name,
       email: user.email,
       password: "",
+      confirmPassword: "",
       role_id: user.role.id,
     });
     setEditMode(FormMode.EDIT);
@@ -64,6 +65,7 @@ const UsersPage: FunctionComponent = () => {
       name: user.name,
       email: user.email,
       password: "",
+      confirmPassword: "",
       role_id: user.role.id,
     });
     setDeleteDialogOpen(true);

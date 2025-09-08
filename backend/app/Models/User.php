@@ -6,14 +6,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Offer;
 
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, HasApiTokens;
+    use HasFactory, Notifiable, SoftDeletes, HasRoles, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -71,5 +73,10 @@ class User extends Authenticatable implements JWTSubject
     public function role()
     {
         return $this->belongsTo(Role::class);
+    }
+
+    public function offers()
+    {
+        return $this->hasMany(Offer::class, 'general_created_by_user_id');
     }
 }

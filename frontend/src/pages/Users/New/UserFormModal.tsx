@@ -11,6 +11,7 @@ export interface UserFormValues {
   id?: number;
   name: string;
   password: string;
+  confirmPassword?: string;
   email: string;
   role_id: number;
 }
@@ -30,6 +31,7 @@ const UserFormModal = ({
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
     role_id: 1,
   },
   mode = FormMode.CREATE,
@@ -48,20 +50,25 @@ const UserFormModal = ({
         password: Yup.string()
           .min(6, "Passwort muss mindestens 6 Zeichen lang sein")
           .required("Passwort ist erforderlich"),
+        confirmPassword: Yup.string()
+          .oneOf([Yup.ref("password")], "Passwörter stimmen nicht überein")
+          .required("Passwort-Bestätigung ist erforderlich")
+          .nullable(),
       }),
     });
 
   const handleFormSubmit = async (values: UserFormValues, actions: any) => {
     try {
       if (mode === FormMode.EDIT && values.id != null) {
-        const { password, ...rest } = values;
+        const { password, confirmPassword, ...rest } = values;
         const updateData = password ? { ...rest, password } : rest;
         await UsersApi.updateUser(values.id, updateData);
         enqueueSnackbar("Benutzer erfolgreich aktualisiert", {
           variant: "success",
         });
       } else {
-        await UsersApi.createUser(values);
+        const { confirmPassword, ...createData } = values;
+        await UsersApi.createUser(createData);
         enqueueSnackbar("Benutzer erfolgreich erstellt", {
           variant: "success",
         });

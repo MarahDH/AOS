@@ -1,10 +1,12 @@
 import * as Yup from "yup";
 import AOSLog from "../../assets/aos-logo.png";
 import LoginForm from "./LoginForm";
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography, Alert } from "@mui/material";
 import { Form, Formik } from "formik";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@contexts/AuthProvider";
+import { useState } from "react";
+import { AxiosError } from "axios";
 
 interface LoginFormValues {
   email: string;
@@ -28,16 +30,26 @@ const validationSchema = Yup.object({
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [error, setError] = useState<string>("");
 
   const handleSubmit = async (
     values: LoginFormValues,
     { setSubmitting }: any
   ) => {
     try {
+      setError(""); // Clear any previous errors
       await login(values.email, values.password);
       navigate("/");
-    } catch (error) {
+    } catch (error: AxiosError | any) {
       setSubmitting(false);
+      console.log(error);
+      
+      // Extract error message from the error object
+      const errorMessage = error?.response?.data?.data?.message || 
+                          error?.response?.data?.message || 
+                          error?.message || 
+                          "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.";
+      setError(errorMessage);
     }
   };
 
@@ -58,10 +70,17 @@ const LoginPage = () => {
           Anmelden
         </Typography>
 
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
         <Formik
           initialValues={initialValues}
           validationSchema={validationSchema}
           onSubmit={handleSubmit}
+          enableReinitialize={false}
         >
           {(formik) => (
             <Form>

@@ -142,4 +142,34 @@ class OfferRawMaterialRepository
             }
         }
     }
+
+    /**
+     * Sync prices from raw_materials to offers_raw_materials for a specific offer
+     */
+    public function syncPricesFromRawMaterials(int $offerId): void
+    {
+        $offerRawMaterials = OfferRawMaterial::where('offer_id', $offerId)->get();
+        
+        foreach ($offerRawMaterials as $offerRawMaterial) {
+            $rawMaterial = \App\Models\RawMaterial::find($offerRawMaterial->raw_material_id);
+            
+            if ($rawMaterial && ($rawMaterial->price !== null || $rawMaterial->price_date !== null)) {
+                $updateData = [];
+                
+                if ($rawMaterial->price !== null) {
+                    $updateData['price'] = $rawMaterial->price;
+                }
+                
+                if ($rawMaterial->price_date !== null) {
+                    $updateData['price_date'] = $rawMaterial->price_date;
+                }
+                
+                if (!empty($updateData)) {
+                    OfferRawMaterial::where('offer_id', $offerId)
+                        ->where('raw_material_id', $offerRawMaterial->raw_material_id)
+                        ->update($updateData);
+                }
+            }
+        }
+    }
 }

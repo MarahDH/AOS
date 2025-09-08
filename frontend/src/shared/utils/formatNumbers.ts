@@ -59,3 +59,10 @@ export function formatNumberToGerman(value: number): string {
     maximumFractionDigits: 2,
   }).format(value);
 }
+
+/**
+ * Format integer with thousand separators (e.g., 1000 -> "1.000")
+ */
+export function formatIntegerToGerman(value: number): string {
+  return new Intl.NumberFormat("de-DE").format(value);
+}

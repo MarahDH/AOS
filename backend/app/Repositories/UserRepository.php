@@ -3,17 +3,18 @@
 namespace App\Repositories;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class UserRepository
 {
     public function getAll()
     {
-        return User::with('role')->get();
+        return User::with('role')->whereNull('deleted_at')->get();
     }
 
     public function find($id)
     {
-        return User::findOrFail($id);
+        return User::whereNull('deleted_at')->findOrFail($id);
     }
 
     public function create(array $data)
@@ -32,7 +33,15 @@ class UserRepository
     public function delete(int $id)
     {
         $user = $this->find($id);
-        return $user->delete();
+        
+        // Check if user has offers before deletion
+        if ($user->offers()->count() > 0) {
+            // Log the deletion for audit purposes
+            Log::info("Deleting user {$user->name} (ID: {$id}) with {$user->offers()->count()} offers");
+        }
+        
+        // This will now cascade delete all offers created by this user
+        return $user->forceDelete();
     }
 
     public function changePassword(int $userId, array $data)
