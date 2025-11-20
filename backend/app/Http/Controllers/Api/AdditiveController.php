@@ -3,18 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\BaseController;
-use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiResponse;
-use App\Models\Additive;
+use App\Services\AdditiveOfferRawMaterialService;
 
 class AdditiveController extends BaseController
 {
-    //
 
-
+    public function __construct(private AdditiveOfferRawMaterialService $service) {}
+    
     public function index()
     {
-        $additives = Additive::all();
+        $additives = $this->service->getAllAdditives();
 
         return ApiResponse::success($additives);
     }

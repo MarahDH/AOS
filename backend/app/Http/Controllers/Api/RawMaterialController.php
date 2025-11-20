@@ -7,7 +7,6 @@ use App\Http\Controllers\BaseController;
 use App\Http\Requests\RawMaterial\CreateRawMaterialRequest;
 use App\Http\Requests\RawMaterial\UpdateRawMaterialRequest;
 use App\Http\Resources\ApiResponse;
-use App\Models\RawMaterial;
 use App\Services\RawMaterialService;
 
 class RawMaterialController extends BaseController
@@ -40,8 +39,7 @@ class RawMaterialController extends BaseController
 
     public function update(UpdateRawMaterialRequest $request, $id)
     {
-        $material = RawMaterial::findOrFail($id);
-        $material->update($request->validated());
+        $material = $this->service->updateRawMaterial($id, $request->validated());
 
         return ApiResponse::success($material->fresh());
     }

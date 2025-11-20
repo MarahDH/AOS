@@ -2,14 +2,25 @@
 
 namespace App\Services;
 
-
-namespace App\Services;
-
 use App\Models\AdditiveOfferRawMaterial;
+use App\Models\Additive;
+use App\Repositories\OfferRawMaterialRepository;
 use Illuminate\Support\Facades\Log;
 
 class AdditiveOfferRawMaterialService
 {
+    private $offerRawMaterialRepository;
+
+    public function __construct(OfferRawMaterialRepository $offerRawMaterialRepository)
+    {
+        $this->offerRawMaterialRepository = $offerRawMaterialRepository;
+    }
+
+    public function getAllAdditives()
+    {
+        return Additive::all();
+    }
+
     public function update(array $data): AdditiveOfferRawMaterial
     {
         $updated = AdditiveOfferRawMaterial::where('offer_id', $data['offer_id'])
@@ -27,6 +38,9 @@ class AdditiveOfferRawMaterialService
         }
 
         $updated->update($fieldsToUpdate);
+
+        // Update the total price share when additives change
+        $this->offerRawMaterialRepository->updateTotalPriceShare($data['offer_id']);
 
         // Reload the model for response
         return AdditiveOfferRawMaterial::with('additive')

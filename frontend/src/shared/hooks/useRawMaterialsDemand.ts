@@ -1,23 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { OfferRawMaterialCalculatedModel } from "@interfaces/RawMaterial.model";
 import { OfferRawMaterialCalculatedApi } from "@api/offer-raw-material";
 import { useApiSuccessHandler } from "./useApiSuccessHandler";
+import { useOfferData } from "./useOfferData";
 
 export const useRawMaterials = (offerId: number) => {
   const queryClient = useQueryClient();
   const { showSuccess } = useApiSuccessHandler();
 
-  // Load raw materials
-  const rawMaterialsQuery = useQuery<OfferRawMaterialCalculatedModel[]>({
-    queryKey: ["raw-materials", offerId],
-    queryFn: async () => {
-      const response =
-        await OfferRawMaterialCalculatedApi.getRawMaterialCalculatedByOfferId(
-          offerId
-        );
-      return response;
-    },
-  });
+  // Load raw materials from consolidated data
+  const { data: offerData, ...rawMaterialsQuery } = useOfferData(offerId);
 
   // Update raw material
   const updateMutation = useMutation({
@@ -38,12 +30,13 @@ export const useRawMaterials = (offerId: number) => {
       return response.data;
     },
     onSuccess: () => {
-      // Refresh list after update
-      queryClient.invalidateQueries({ queryKey: ["raw-materials", offerId] });
+      // Refresh consolidated data after update
+      queryClient.invalidateQueries({ queryKey: ["offer-data", offerId] });
     },
   });
 
   return {
+    data: offerData?.raw_materials_calculated || [],
     ...rawMaterialsQuery,
     updateRawDemanMaterial: updateMutation.mutateAsync,
     updateStatus: updateMutation.status,

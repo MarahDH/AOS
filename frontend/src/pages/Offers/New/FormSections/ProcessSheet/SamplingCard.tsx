@@ -69,7 +69,7 @@ const SamplingCard: FunctionComponent = () => {
           <Grid size={{ xs: 12, md: 2.4 }}>
             <FormIntField
               name="runningcard_sampling_length"
-              label="Länge [m]"
+              label="Länge [mm]"
               disabled={
                 !isFieldEditable("runningcard_sampling_length") || !isEditable
               }

@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AdditiveApi } from "@api/additives";
 import { useApiErrorHandler } from "@hooks/useApiErrorHandler";
 import { useApiSuccessHandler } from "@hooks/useApiSuccessHandler";
 import { formatNumberToGerman, parseGermanNumber } from "@utils/formatNumbers";
+import { useOfferData } from "@hooks/useOfferData";
+import { useOfferContext } from "@contexts/OfferProvider";
 
 interface AdditiveFormValue {
   id: number;
@@ -30,6 +33,7 @@ export const useAdditiveModal = (
 ) => {
   const { showError } = useApiErrorHandler();
   const { showSuccess } = useApiSuccessHandler();
+  const queryClient = useQueryClient();
 
   const [additivesList, setAdditivesList] = useState<AdditiveFormValue[]>([]);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -57,17 +61,16 @@ export const useAdditiveModal = (
     setFormattedShareInputs(shareMap);
   }, [initialValues]);
 
+  // Get consolidated data at the hook level
+  const { offerId } = useOfferContext();
+  const { data: offerData } = useOfferData(offerId!);
+
   useEffect(() => {
-    const fetchAdditives = async () => {
-      try {
-        const res = await AdditiveApi.getAll();
-        setAdditivesList(res);
-      } catch (err) {
-        showError(err);
-      }
-    };
-    fetchAdditives();
-  }, []);
+    // Use consolidated data directly - no need for individual API call
+    if (offerData?.additives) {
+      setAdditivesList(offerData.additives);
+    }
+  }, [offerData?.additives]);
 
   const handleValueBlur = async (
     type: "price" | "share",
@@ -105,6 +108,8 @@ export const useAdditiveModal = (
         additives_id: item.id,
         [type]: parsed,
       });
+      // Invalidate the consolidated offer-data query to refresh all data
+      queryClient.invalidateQueries({ queryKey: ["offer-data", selectedMaterial.offer_id] });
       showSuccess(
         `${type === "price" ? "Preis" : "Prozentsatz"} wurde aktualisiert`
       );
@@ -147,6 +152,9 @@ export const useAdditiveModal = (
         ...prev,
         [index]: formatNumberToGerman(res.share ?? 0),
       }));
+      
+      // Invalidate the consolidated offer-data query to refresh all data
+      queryClient.invalidateQueries({ queryKey: ["offer-data", selectedMaterial.offer_id] });
     } catch (err) {
       showError(err);
     }
@@ -161,6 +169,9 @@ export const useAdditiveModal = (
         additives_id: deletingItem.id,
       });
       remove(deletingItem.index);
+      
+      // Invalidate the consolidated offer-data query to refresh all data
+      queryClient.invalidateQueries({ queryKey: ["offer-data", selectedMaterial.offer_id] });
     } catch (err) {
       showError(err);
     } finally {

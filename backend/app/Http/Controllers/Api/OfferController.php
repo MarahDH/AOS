@@ -9,6 +9,10 @@ use App\Http\Requests\Offer\UpdateOfferFieldRequest;
 use App\Models\Offer;
 use App\Models\OfferStatus;
 use App\Services\OfferService;
+use App\Services\AdditiveOfferRawMaterialService;
+use App\Services\RawMaterialService;
+use App\Services\OfferRawMaterialService;
+use App\Services\OfferStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +20,14 @@ use Illuminate\Support\Facades\File;
 
 class OfferController extends BaseController
 {
-    public function __construct(private OfferService $service) {}
+    public function __construct(
+        private OfferService $service,
+        private OfferStatusService $offerStatusService,
+        private AdditiveOfferRawMaterialService $additiveOfferRawMaterialService,
+        private RawMaterialService $rawMaterialService,
+        private OfferRawMaterialService $offerRawMaterialService
+
+    ) {}
 
     public function index()
     {
@@ -129,6 +140,23 @@ class OfferController extends BaseController
         $fields = $this->service->editableFieldsByRoleAndStatus($user, $offer);
 
         return ApiResponse::success($fields, 'Editable fields retrieved successfully');
+    }
+
+    public function getOfferData(int $id)
+    {
+        $user = Auth::user();
+        $offer = Offer::findOrFail($id);
+
+        // Get all the data needed for the offer page in one request (excluding offer data since it's already fetched separately)
+        $data = [
+            'editable_fields' => $this->service->editableFieldsByRoleAndStatus($user, $offer),
+            'offer_statuses' => $this->offerStatusService->getAll(),
+            'additives' => $this->additiveOfferRawMaterialService->getAllAdditives(),
+            'raw_materials' => $this->rawMaterialService->getAllMaterials(),
+            'raw_materials_calculated' => $this->offerRawMaterialService->getRawMaterialsCalculated($id),
+        ];
+
+        return ApiResponse::success($data, 'Offer data retrieved successfully');
     }
 
     public function getTemplates()

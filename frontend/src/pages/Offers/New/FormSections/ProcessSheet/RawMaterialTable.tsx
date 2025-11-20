@@ -1,8 +1,6 @@
-import { OfferRawMaterialCalculatedApi } from "@api/offer-raw-material";
 import CardBox from "@components/CardBox";
 import { useOfferContext } from "@contexts/OfferProvider";
-import { useApiErrorHandler } from "@hooks/useApiErrorHandler";
-import { RawMaterialRow } from "@interfaces/RawMaterial.model";
+import { useOfferData } from "@hooks/useOfferData";
 import {
   Table,
   TableHead,
@@ -12,31 +10,14 @@ import {
   TableContainer,
   Paper,
 } from "@mui/material";
-import { useEffect, useState } from "react";
 
 export default function RawMaterialTable() {
   // Hooks
-  const { showError } = useApiErrorHandler();
   const { offerId } = useOfferContext();
+  const { data: offerData } = useOfferData(offerId!);
 
-  // State
-  const [materials, setMaterials] = useState<RawMaterialRow[]>([]);
-
-  const fetchMaterials = async () => {
-    try {
-      const res =
-        await OfferRawMaterialCalculatedApi.getRawMaterialCalculatedByOfferId(
-          offerId!
-        );
-      setMaterials(res);
-    } catch (error) {
-      showError(error);
-    }
-  };
-
-  useEffect(() => {
-    fetchMaterials();
-  }, []);
+  // Get materials from consolidated data
+  const materials = offerData?.raw_materials_calculated || [];
 
   return (
     <CardBox label="Rohstoffe">

@@ -1,10 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { OffersApi } from "@api/offers";
+import { useOfferData } from "./useOfferData";
+import { useOfferContext } from "@contexts/OfferProvider";
 
 export const useOfferStatuses = () => {
-  return useQuery({
-    queryKey: ["offer-statuses"],
-    queryFn: OffersApi.getAllOfferStatus,
-    refetchOnWindowFocus: false,
-  });
+  const { offerId } = useOfferContext();
+  const { data: offerData, ...rest } = useOfferData(offerId!);
+  
+  return {
+    data: offerData?.offer_statuses || [],
+    ...rest,
+  };
 };

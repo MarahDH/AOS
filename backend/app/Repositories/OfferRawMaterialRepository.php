@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Http\Resources\OfferRawMaterialCalculatedResource;
 use App\Models\OfferRawMaterial;
 use App\Models\OfferRawMaterialCalculated;
+use App\Models\Offer;
 use Illuminate\Support\Facades\DB;
 
 class OfferRawMaterialRepository
@@ -25,11 +26,14 @@ class OfferRawMaterialRepository
                 ->where('raw_material_id', $rawMaterialId)
                 ->update($data);
 
-            $updated = OfferRawMaterialCalculated::where('offer_id', $offerId)
-                ->where('raw_material_id', $rawMaterialId)
-                ->first();
+        $updated = OfferRawMaterialCalculated::where('offer_id', $offerId)
+            ->where('raw_material_id', $rawMaterialId)
+            ->first();
 
-            return new OfferRawMaterialCalculatedResource($updated);
+        // Update the total price share in the offers table
+        $this->updateTotalPriceShare($offerId);
+
+        return new OfferRawMaterialCalculatedResource($updated);
         }
 
         // raw_material_id تم تغييره
@@ -106,6 +110,9 @@ class OfferRawMaterialRepository
             abort(404, 'Raw material not found for this offer.');
         }
 
+        // Update the total price share in the offers table
+        $this->updateTotalPriceShare($offerId);
+
         return new OfferRawMaterialCalculatedResource($updated);
     }
 
@@ -141,6 +148,9 @@ class OfferRawMaterialRepository
                     ]);
             }
         }
+
+        // Update the total price share in the offers table
+        $this->updateTotalPriceShare($offerId);
     }
 
     /**
@@ -170,6 +180,32 @@ class OfferRawMaterialRepository
                         ->update($updateData);
                 }
             }
+        }
+
+        // Update the total price share in the offers table
+        $this->updateTotalPriceShare($offerId);
+    }
+
+    /**
+     * Update the total price share in the offers table when raw materials change
+     */
+    public function updateTotalPriceShare(int $offerId): void
+    {
+        // Calculate the total price share from the calculated view
+        $totalPriceShare = DB::table('offers_raw_materials_calculated')
+            ->where('offer_id', $offerId)
+            ->sum('_price_share');
+
+        // Update the offers table with the calculated total
+        // Always update when raw materials change
+        $offer = Offer::find($offerId);
+        if ($offer) {
+            $offer->update([
+                'general_raw_material_price_total_overwritten' => $totalPriceShare
+            ]);
+            
+            // Log for debugging
+            \Log::info("Updated general_raw_material_price_total_overwritten for offer {$offerId} to {$totalPriceShare}");
         }
     }
 }

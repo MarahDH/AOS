@@ -3,7 +3,7 @@ import FormInputField from "@components/FormInputField";
 import FormInputSaveField from "@components/FormInputSaveField";
 import Grid from "@mui/material/Grid2";
 import { FormikProvider } from "formik";
-import { Typography, Button, Stack, TableRow, TableCell } from "@mui/material";
+import { Typography, Button, Stack, TableRow, TableCell, CircularProgress, Box } from "@mui/material";
 import { Table, TableContainer, TableBody, Paper } from "@mui/material";
 import RawMaterialTableHead from "./RawMaterialSection/RawMaterialTableHead";
 import RawMaterialRow from "./RawMaterialSection/RawMaterialRow";
@@ -26,37 +26,40 @@ const RawMaterialPrices = () => {
     handleChangeMaterial,
     handleUpdateField,
     setRawMaterialRows,
-    fetchOfferRawMaterials,
     createEmptyRow,
     handleAddMaterial,
+    totalPriceShare,
+    totalDemand,
+    isLoading,
   } = useRawMaterialPricesTable();
-
-  const totalDemand = rawMaterialRows.reduce(
-    (sum, row) => sum + (parseFloat(String(row.absolut_demand)) || 0),
-    0
-  );
-
-  const totalPriceShare = rawMaterialRows.reduce(
-    (sum, row) => sum + (parseFloat(String(row._price_share)) || 0),
-    0
-  );
 
   return (
     <FormikProvider value={formik}>
       <CardBox label="Rohstoffpreise">
-        <Grid
-          container
-          spacing={2}
-          alignItems="center"
-          justifyContent="end"
-          mb={2}
-        >
+        {isLoading ? (
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            minHeight="200px"
+          >
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            <Grid
+              container
+              spacing={2}
+              alignItems="center"
+              justifyContent="end"
+              mb={2}
+            >
           <Grid size={{ xs: 2, md: 1.5 }}>
             <FormInputSaveField
               name="general_raw_material_purchase_discount"
               label="Skonto [%]"
               numeric
-              onSaved={fetchOfferRawMaterials}
+              onSaved={() => {}}
               disabled={
                 !isFieldEditable("general_raw_material_purchase_discount")
               }
@@ -80,7 +83,6 @@ const RawMaterialPrices = () => {
                   setRawMaterialRows={setRawMaterialRows}
                   onOpenModal={handleOpenModal}
                   handleAddMaterial={handleAddMaterial}
-                  fetchOfferRawMaterials={fetchOfferRawMaterials}
                 />
               ))}
 
@@ -198,12 +200,13 @@ const RawMaterialPrices = () => {
             </Button>
           </Grid>
         </Grid>
+          </>
+        )}
       </CardBox>
 
       <AdditiveModal
         open={openModal}
         onClose={() => {
-          fetchOfferRawMaterials();
           setOpenModal(false);
         }}
         materialName={selectedMaterial?.name || ""}

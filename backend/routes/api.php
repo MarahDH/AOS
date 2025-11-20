@@ -44,6 +44,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::prefix('offers')->group(function () {
         Route::get('/', [OfferController::class, 'index'])->middleware('check.permission:' . PermissionConstants::VIEW_OFFERS);
         Route::get('{id}', [OfferController::class, 'show'])->middleware('check.permission:' . PermissionConstants::VIEW_OFFER);
+        Route::get('{id}/data', [OfferController::class, 'getOfferData'])->middleware('check.permission:' . PermissionConstants::VIEW_OFFER);
         Route::post('/', [OfferController::class, 'store'])->middleware('check.permission:' . PermissionConstants::CREATE_OFFER);
         Route::patch('{id}', [OfferController::class, 'update'])->middleware('check.permission:' . PermissionConstants::UPDATE_OFFER);
         Route::post('{id}/duplicate', [OfferController::class, 'duplicate'])->middleware('check.permission:' . PermissionConstants::DUPLICAET_OFFER);

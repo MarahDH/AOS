@@ -12,11 +12,15 @@ use App\Http\Resources\ApiResponse;
 use App\Models\Additive;
 use App\Models\AdditiveOfferRawMaterial;
 use App\Services\AdditiveOfferRawMaterialService;
+use App\Repositories\OfferRawMaterialRepository;
 
 class AdditiveOfferRawMaterialController extends BaseController
 {
 
-    public function __construct(private AdditiveOfferRawMaterialService $service) {}
+    public function __construct(
+        private AdditiveOfferRawMaterialService $service,
+        private OfferRawMaterialRepository $offerRawMaterialRepository
+    ) {}
 
     public function getAdditivesForRawMaterial(GetAdditivesForRawMaterialRequest $request)
     {
@@ -51,6 +55,9 @@ class AdditiveOfferRawMaterialController extends BaseController
 
         $additiveOffer->load('additive');
 
+        // Update the total price share when additives are added
+        $this->offerRawMaterialRepository->updateTotalPriceShare($request->offer_id);
+
         return ApiResponse::success(
             new AdditiveOfferRawMaterialResource($additiveOffer),
             'Additive hinzugefügt.'
@@ -72,6 +79,9 @@ class AdditiveOfferRawMaterialController extends BaseController
             ->where('raw_material_id', $request->raw_material_id)
             ->where('additives_id', $request->additives_id)
             ->delete();
+
+        // Update the total price share when additives are deleted
+        $this->offerRawMaterialRepository->updateTotalPriceShare($request->offer_id);
 
         return ApiResponse::success(null, 'Additive deleted successfully');
     }

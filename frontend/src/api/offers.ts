@@ -108,6 +108,19 @@ export class OffersApi {
     });
   }
 
+  static async getOfferData(offerId: number) {
+    return await handleRequest<{
+      editable_fields: string[];
+      offer_statuses: any[];
+      additives: any[];
+      raw_materials: any[];
+      raw_materials_calculated: any[];
+    }>({
+      method: "GET",
+      endpoint: `offers/${offerId}/data`,
+    });
+  }
+
   // Offer status
   static async getAllOfferStatus() {
     return await handleRequest<any[]>({

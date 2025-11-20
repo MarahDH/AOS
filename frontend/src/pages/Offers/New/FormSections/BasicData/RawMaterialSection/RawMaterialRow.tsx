@@ -21,6 +21,7 @@ import { useApiSuccessHandler } from "@hooks/useApiSuccessHandler";
 import { useEditableFields } from "@hooks/useEditableFields";
 import { useEffect, useState } from "react";
 import { useOfferContext } from "@contexts/OfferProvider";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface RawMaterialRowProps {
   row: RawMaterialRowType;
@@ -45,7 +46,6 @@ interface RawMaterialRowProps {
     rawMaterialId: number;
     data: Partial<OfferRawMaterialCalculatedModel>;
   }) => void;
-  fetchOfferRawMaterials: () => void;
 }
 
 const RawMaterialRow = ({
@@ -58,12 +58,12 @@ const RawMaterialRow = ({
   onOpenModal,
   updateDemand,
   handleAddMaterial,
-  fetchOfferRawMaterials,
 }: RawMaterialRowProps) => {
   const { offerDetails, offerId } = useOfferContext();
   const { showError } = useApiErrorHandler();
   const { showSuccess } = useApiSuccessHandler();
   const { data: editableFields = [] } = useEditableFields(offerId!);
+  const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const isFieldEditable = (fieldName: string) =>
@@ -112,17 +112,12 @@ const RawMaterialRow = ({
         row.raw_material_id
       );
       showSuccess("Rohstoff erfolgreich gelöscht.");
-      setRawMaterialRows((prev) =>
-        prev.filter(
-          (r) =>
-            !(
-              r.offer_id === offerDetails.id &&
-              r.raw_material_id === row.raw_material_id
-            )
-        )
-      );
+      
+      // Invalidate the consolidated offer-data query to refresh all data
+      // This will trigger a refetch and update both rawMaterialRows and totals
+      queryClient.invalidateQueries({ queryKey: ["offer-data", offerDetails.id] });
+      
       setConfirmOpen(false);
-      await fetchOfferRawMaterials();
     } catch (error) {
       showError(error);
       setConfirmOpen(false);
@@ -216,7 +211,6 @@ const RawMaterialRow = ({
 
             updateRowField(setRawMaterialRows, row, "absolut_demand", parsed);
             setTotalDemandInputValue(formatNumberToGerman(parsed));
-            await fetchOfferRawMaterials();
           }}
         />
       </TableCell>

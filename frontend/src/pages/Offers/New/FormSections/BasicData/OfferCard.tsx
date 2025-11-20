@@ -7,12 +7,12 @@ import Grid from "@mui/material/Grid2";
 import { CARD_HEIGHT } from "@utils/constantValue";
 import { DeliveryTypeLabels } from "@enums/GeneralEnums";
 import { FormikProvider, useFormik } from "formik";
-import { FunctionComponent, useEffect, useState } from "react";
+import { FunctionComponent, useEffect } from "react";
 import { OfferCardInitialValues } from "../../Index";
-import { OffersApi } from "@api/offers";
 import { Skeleton } from "@mui/material";
 import { useEditableFields } from "@hooks/useEditableFields";
 import { useFieldEditable } from "@hooks/useFieldEditable";
+import { useOfferData } from "@hooks/useOfferData";
 import { useOfferContext } from "@contexts/OfferProvider";
 
 const OfferCard: FunctionComponent = () => {
@@ -22,29 +22,12 @@ const OfferCard: FunctionComponent = () => {
   const { refetch: refetchEditableFields } = useEditableFields(offerId!);
   const { isFieldEditable } = useFieldEditable(offerId!);
 
-  // Dropdowns
-  const [statusOptions, setStatusOptions] = useState<
-    { value: number; label: string }[]
-  >([]);
-
-  const fetchStatusOptions = async () => {
-    try {
-      const res = await OffersApi.getAllOfferStatus();
-      if (res) {
-        const options = res.map((status: any) => ({
-          value: status.id,
-          label: status.name,
-        }));
-        setStatusOptions(options);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  useEffect(() => {
-    fetchStatusOptions();
-  }, []);
+  // Dropdowns - use consolidated data
+  const { data: offerData } = useOfferData(offerId!);
+  const statusOptions = offerData?.offer_statuses?.map((status: any) => ({
+    value: status.id,
+    label: status.name,
+  })) || [];
 
   const deliveryOptions = Object.entries(DeliveryTypeLabels).map(
     ([value, label]) => ({ value, label })

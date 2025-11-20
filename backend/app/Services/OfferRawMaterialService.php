@@ -4,10 +4,17 @@ namespace App\Services;
 
 use App\Repositories\OfferRawMaterialRepository;
 use App\Http\Resources\OfferRawMaterialCalculatedResource;
+use App\Models\OfferRawMaterialCalculated;
 
 class OfferRawMaterialService
 {
     public function __construct(protected OfferRawMaterialRepository $repository) {}
+
+    public function getRawMaterialsCalculated(int $offerId)
+    {
+        $data = OfferRawMaterialCalculated::where('offer_id', $offerId)->get();
+        return OfferRawMaterialCalculatedResource::collection($data);
+    }
 
     public function update(int $offerId, int $rawMaterialId, array $data): OfferRawMaterialCalculatedResource
     {
