@@ -15,17 +15,17 @@ return new class extends Migration
 
                 -- Jahresumsatz = AVG(Marge1-Meterpreis, Marge2-Meterpreis) * Jahresbedarf
                 (
-                    (oc._pricing_endprices_graduated_without_confection_lfm_quantityA + oc._pricing_endprices_graduated_without_confection_lfm_quantityB)
-                    / 2 * oc.calculation_working_annual_requirement_estimated
+                    (COALESCE(oc._pricing_endprices_graduated_without_confection_lfm_quantityA, 0) + COALESCE(oc._pricing_endprices_graduated_without_confection_lfm_quantityB, 0))
+                    / 2 * COALESCE(oc.calculation_working_annual_requirement_estimated, 0)
                 ) AS `_pricing_requirement_annual_sales`,
 
                 -- Fixkosten [€] = Jahresumsatz-Rohstoffeinsatz-Zeitkosten
                 (
                     (
-                        (oc._pricing_endprices_graduated_without_confection_lfm_quantityA + oc._pricing_endprices_graduated_without_confection_lfm_quantityB)
-                        / 2 * oc.calculation_working_annual_requirement_estimated
+                        (COALESCE(oc._pricing_endprices_graduated_without_confection_lfm_quantityA, 0) + COALESCE(oc._pricing_endprices_graduated_without_confection_lfm_quantityB, 0))
+                        / 2 * COALESCE(oc.calculation_working_annual_requirement_estimated, 0)
                     ) 
-                    - oc._pricing_costs_yearly_raw_material_quantity - oc._pricing_costs_yearly_time_costs_quantity
+                    - COALESCE(oc._pricing_costs_yearly_raw_material_quantity, 0) - COALESCE(oc._pricing_costs_yearly_time_costs_quantity, 0)
                 ) AS `_pricing_costs_yearly_fixcosts`,
 
                 -- Stück-Längen-Preise Staffel/m -- piece-length-prices graduated lfm

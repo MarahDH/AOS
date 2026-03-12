@@ -238,17 +238,22 @@ export const useRawMaterialPricesTable = () => {
       const data = offerData as any;
       formik.setFieldValue("general_raw_material_purchase_discount", data.general_raw_material_purchase_discount ?? "");
       
-      // Always update the overwritten field with the calculated total
-      // This ensures it reflects the latest calculated value from raw materials + additives
-      if (totalPriceShare !== undefined && totalPriceShare !== null) {
-        console.log("Updating formik with totalPriceShare:", totalPriceShare);
+      // For the overwritten field, prioritize the saved value from offerDetails (backend)
+      // Only use calculated totalPriceShare as fallback if no saved value exists
+      // This preserves manually entered values when switching tabs
+      const savedValue = offerDetails?.general_raw_material_price_total_overwritten;
+      if (savedValue !== null && savedValue !== undefined && savedValue !== "") {
+        console.log("Updating formik with saved backend value:", savedValue);
+        formik.setFieldValue("general_raw_material_price_total_overwritten", savedValue);
+      } else if (totalPriceShare !== undefined && totalPriceShare !== null) {
+        console.log("Updating formik with calculated totalPriceShare:", totalPriceShare);
         formik.setFieldValue("general_raw_material_price_total_overwritten", totalPriceShare);
       } else {
-        console.log("Updating formik with backend value:", data.general_raw_material_price_total_overwritten);
-        formik.setFieldValue("general_raw_material_price_total_overwritten", data.general_raw_material_price_total_overwritten ?? "");
+        console.log("Updating formik with empty value");
+        formik.setFieldValue("general_raw_material_price_total_overwritten", "");
       }
     }
-  }, [offerData, totalPriceShare]);
+  }, [offerData, totalPriceShare, offerDetails]);
 
   // Update raw material rows when consolidated data changes
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { FunctionComponent, useEffect, useState } from "react";
+import { FunctionComponent, useEffect, useState, useRef } from "react";
 import CardBox from "../../../components/CardBox";
 import BasicDataTab from "./Tabs/BasicData";
 import CalculationTab from "./Tabs/Calculation";
@@ -61,6 +61,7 @@ const OfferForm: FunctionComponent<OfferFormProps> = () => {
     const saved = localStorage.getItem("offer_form_selected_tab");
     return saved !== null ? Number(saved) : 0;
   });
+  const previousTabRef = useRef<number>(selectedTab);
 
   const isNew = !id;
 
@@ -100,6 +101,23 @@ const OfferForm: FunctionComponent<OfferFormProps> = () => {
 
     return () => localStorage.removeItem("offer_form_selected_tab");
   }, [id]);
+
+  // Refetch offer when switching to Prices tab to ensure calculated values are up-to-date
+  // This is especially important after setting up calculation fields, as backend initialization
+  // may have updated graduated pricing fields that affect Prices tab calculations
+  useEffect(() => {
+    if (!isNew && id && selectedTab !== previousTabRef.current) {
+      const pricesTabIndex = tabs.findIndex((tab) => tab.label === "Preise");
+      
+      // Only refetch when switching TO the Prices tab (not when already on it or leaving it)
+      if (pricesTabIndex !== -1 && selectedTab === pricesTabIndex && previousTabRef.current !== pricesTabIndex) {
+        loadOffer();
+      }
+      
+      previousTabRef.current = selectedTab;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTab, id, isNew]);
 
   // 🛡️ Show spinner if loading
   if (isLoadingOfferDetails) {

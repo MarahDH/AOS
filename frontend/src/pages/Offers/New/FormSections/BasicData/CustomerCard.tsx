@@ -1,6 +1,5 @@
 import CardBox from "@components/CardBox";
 import FormDatePicker from "@components/FormDatePicker";
-import FormIntField from "@components/FormInputs/FormIntField";
 import FormTextField from "@components/FormInputs/FormTextField";
 import Grid from "@mui/material/Grid2";
 import { CARD_HEIGHT } from "@utils/constantValue";
@@ -65,7 +64,7 @@ const CustomerCard: FunctionComponent = () => {
             />
           </Grid>
           <Grid size={{ xs: 6, md: 6 }}>
-            <FormIntField
+            <FormTextField
               name="general_request_number"
               label="Anfragenummer"
               disabled={!isFieldEditable("general_request_number")}

@@ -21,6 +21,15 @@ class OfferService
 
     public function getOfferById(int $id): OfferCalculated
     {
+        // Ensure graduated pricing fields are initialized before returning
+        $offer = Offer::find($id);
+        if ($offer) {
+            // Force initialization check - this ensures graduated fields are set
+            $this->initializeGraduatedPricingFields($offer, '');
+            // Reload the offer to ensure any updates are reflected
+            $offer->refresh();
+        }
+        
         return OfferCalculated::with(['createdByUser', 'status'])->findOrFail($id);
     }
 
@@ -52,7 +61,16 @@ class OfferService
             'general_creation_date' => now(),
         ];
 
-        return $this->repository->createOffer($data);
+        $offer = $this->repository->createOffer($data);
+        
+        // Refresh to ensure database defaults are loaded (setup_time=3, hourly_rate=42)
+        $offer->refresh();
+        
+        // Initialize graduated pricing fields immediately after creation
+        // This ensures that default values are used for calculation even if user hasn't set them
+        $this->initializeGraduatedPricingFields($offer, $field);
+        
+        return $offer;
     }
 
     public function updateField(Offer $offer, string $field, mixed $value): Offer
@@ -68,7 +86,119 @@ class OfferService
             $value = date('Y-m-d', strtotime($value)); // Convert ISO to Y-m-d
         }
 
-        return $this->repository->updateSingleField($offer, $field, $value);
+        $updatedOffer = $this->repository->updateSingleField($offer, $field, $value);
+        
+        // Initialize graduated pricing fields if source values become available
+        $this->initializeGraduatedPricingFields($updatedOffer, $field);
+        
+        // Refresh the offer to ensure we have the latest data after initialization
+        $updatedOffer->refresh();
+        
+        return $updatedOffer;
+    }
+
+    /**
+     * Initialize graduated pricing fields when source values become available.
+     * This ensures calculated fields in the database view work correctly.
+     * 
+     * This method checks on EVERY field update to see if initialization is needed,
+     * ensuring that whenever source values become available, the graduated fields are initialized.
+     */
+    private function initializeGraduatedPricingFields(Offer $offer, string $updatedField): void
+    {
+        // Refresh the offer to get latest values
+        $offer->refresh();
+        
+        // Check if we need to initialize setup costs fields
+        // Calculate directly from source fields to avoid dependency on view calculations
+        // Note: These fields have database defaults (3 and 42), so they should always be available
+        $setupTime = $offer->calculation_additional_setup_time;
+        $hourlyRate = $offer->calculation_additional_hourly_rate;
+        
+        // Check if source fields are set (not null and not empty string, but allow "0" as valid)
+        // With database defaults (setup_time=3, hourly_rate=42), these should have values after refresh
+        // But if they're null, use defaults for calculation
+        if ($setupTime === null) {
+            $setupTime = 3; // Default value from migration
+        }
+        if ($hourlyRate === null) {
+            $hourlyRate = 42; // Default value from migration
+        }
+        
+        // Check if we have valid numeric values (including defaults)
+        $hasSetupTime = $setupTime !== null && $setupTime !== '' && is_numeric($setupTime);
+        $hasHourlyRate = $hourlyRate !== null && $hourlyRate !== '' && is_numeric($hourlyRate);
+        
+        if ($hasSetupTime && $hasHourlyRate) {
+            // Calculate setup costs directly: setup_time * hourly_rate
+            // Convert to numeric values to ensure proper calculation
+            $setupTimeValue = (float)$setupTime;
+            $hourlyRateValue = (float)$hourlyRate;
+            $setupCostsValue = $setupTimeValue * $hourlyRateValue;
+            
+            $setupCostFields = [
+                'pricing_grad_qtyB_add_setupcosts',
+                'pricing_grad_qtyC_add_setupcosts',
+                'pricing_grad_qtyD_add_setupcosts',
+                'pricing_grad_qtyE_add_setupcosts',
+            ];
+            
+            $needsUpdate = false;
+            foreach ($setupCostFields as $field) {
+                $currentValue = $offer->{$field};
+                // Check for both null and empty string (empty string might be used instead of null)
+                if ($currentValue === null || $currentValue === '') {
+                    $needsUpdate = true;
+                    break;
+                }
+            }
+            
+            // Batch update if any field needs updating
+            if ($needsUpdate) {
+                foreach ($setupCostFields as $field) {
+                    $currentValue = $offer->{$field};
+                    if ($currentValue === null || $currentValue === '') {
+                        $this->repository->updateSingleField($offer, $field, $setupCostsValue);
+                    }
+                }
+                // Single refresh after batch update
+                $offer->refresh();
+            }
+        }
+        
+        // Check if we need to initialize transport cost fields
+        // Initialize if calculation_additional_transport_costs_total is available but graduated fields are null
+        $transportValue = $offer->calculation_additional_transport_costs_total;
+        // Allow "0" as a valid value, but exclude null and empty string
+        if ($transportValue !== null && $transportValue !== '' && is_numeric($transportValue)) {
+            $transportFields = [
+                'pricing_grad_qtyB_add_transport',
+                'pricing_grad_qtyC_add_transport',
+                'pricing_grad_qtyD_add_transport',
+                'pricing_grad_qtyE_add_transport',
+            ];
+            
+            $needsUpdate = false;
+            foreach ($transportFields as $field) {
+                $currentValue = $offer->{$field};
+                if ($currentValue === null || $currentValue === '') {
+                    $needsUpdate = true;
+                    break;
+                }
+            }
+            
+            // Batch update if any field needs updating
+            if ($needsUpdate) {
+                foreach ($transportFields as $field) {
+                    $currentValue = $offer->{$field};
+                    if ($currentValue === null || $currentValue === '') {
+                        $this->repository->updateSingleField($offer, $field, $transportValue);
+                    }
+                }
+                // Single refresh after batch update
+                $offer->refresh();
+            }
+        }
     }
 
     private function allowedFields(): array
