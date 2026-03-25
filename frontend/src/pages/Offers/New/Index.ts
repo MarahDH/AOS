@@ -161,6 +161,8 @@ export const WorkCalculationFields = [
   "calculation_working_commission",
   "calculation_working_profit",
   "calculation_working_discount",
+
+  "output_per_hour",
 ];
 
 export const WorkCalculationInitialValues = Object.fromEntries(

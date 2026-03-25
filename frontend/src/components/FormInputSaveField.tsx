@@ -64,20 +64,42 @@ const FormInputSaveField: FunctionComponent<FormInputFieldProps> = ({
     let val = e.target.value;
 
     if (numeric && integerOnly) {
-      // Allow dots for thousand separators in integer fields
+      // Allow minus sign at the beginning and dots for thousand separators in integer fields
+      const hasMinus = val.startsWith("-");
+      // Remove everything except digits and dots, then add minus back if it was at the start
       val = val.replace(/[^0-9.]/g, "");
+      // Allow standalone minus or add minus back if it was at the start and there's content
+      if (hasMinus) {
+        if (val.length === 0 && e.target.value === "-") {
+          val = "-"; // Allow standalone minus while typing
+        } else if (val.length > 0) {
+          val = "-" + val;
+        }
+      }
       // Ensure only one dot is allowed and it's followed by exactly 3 digits
-      const parts = val.split(".");
+      const parts = val.replace(/^-/, "").split("."); // Remove minus for splitting
       if (parts.length > 1) {
         // Keep only the first part and parts that are exactly 3 digits
         const filteredParts = parts.filter((part, index) => index === 0 || part.length === 3);
-        val = filteredParts.join(".");
+        const hasMinusInVal = val.startsWith("-");
+        val = (hasMinusInVal ? "-" : "") + filteredParts.join(".");
       }
     } else if (numeric) {
+      // Allow minus sign at the beginning for decimal fields
+      const hasMinus = val.startsWith("-");
       val = val.replace(/[^0-9,]/g, "");
-      const parts = val.split(",");
+      // Allow standalone minus or add minus back if it was at the start and there's content
+      if (hasMinus) {
+        if (val.length === 0 && e.target.value === "-") {
+          val = "-"; // Allow standalone minus while typing
+        } else if (val.length > 0) {
+          val = "-" + val;
+        }
+      }
+      const parts = val.replace(/^-/, "").split(",");
       if (parts.length > 2) {
-        val = parts[0] + "," + parts[1]; // keep only one comma
+        const hasMinusInVal = val.startsWith("-");
+        val = (hasMinusInVal ? "-" : "") + parts[0] + "," + parts[1]; // keep only one comma
       }
     }
 

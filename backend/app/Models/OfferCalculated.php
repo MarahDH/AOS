@@ -117,6 +117,9 @@ class OfferCalculated extends Model
             'calculation_working_discount',
             // 'calculation_working_setup_quantity_additional',
 
+            // Output/Generated Fields
+            'output_per_hour',
+
             // Pricing Graduated Additions
             'pricing_grad_qtyA_add_hourlyrate',
             'pricing_grad_qtyB_add_hourlyrate',

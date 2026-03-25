@@ -126,6 +126,14 @@ const rows: Array<FieldConfig | null>[] = [
     //   numeric: true,
     // },
     null,
+    null,
+    null,
+    {
+      name: "output_per_hour",
+      label: "Ausstoß pro Stunde [kg/h]",
+      disabled: true,
+      type: "float",
+    }
   ],
   [
     {
