@@ -18,9 +18,10 @@ const DemandCard: FC = () => {
       calculation_working_annual_requirement_estimated:
         offerDetails.calculation_working_annual_requirement_estimated ?? "",
       _pricing_requirement_annual_sales:
-        offerDetails._pricing_requirement_annual_sales !== undefined
-          ? Math.round(offerDetails._pricing_requirement_annual_sales * 100) /
-            100
+        offerDetails._pricing_requirement_annual_sales != null
+          ? Math.round(
+              Number(offerDetails._pricing_requirement_annual_sales) * 100
+            ) / 100
           : "",
     },
 

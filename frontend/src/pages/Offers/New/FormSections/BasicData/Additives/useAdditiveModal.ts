@@ -66,10 +66,17 @@ export const useAdditiveModal = (
   const { data: offerData } = useOfferData(offerId!);
 
   useEffect(() => {
-    // Use consolidated data directly - no need for individual API call
-    if (offerData?.additives) {
-      setAdditivesList(offerData.additives);
-    }
+    if (!offerData?.additives?.length) return;
+    setAdditivesList(
+      offerData.additives.map((a) => ({
+        id: a.id,
+        name: a.name,
+        category: String(a.category ?? ""),
+        price: Number(a.price ?? 0),
+        price_date: String(a.price_date ?? ""),
+        share: Number(a.share ?? 0),
+      }))
+    );
   }, [offerData?.additives]);
 
   const handleValueBlur = async (

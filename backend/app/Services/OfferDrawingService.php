@@ -8,6 +8,7 @@ use App\Models\OfferDrawing;
 use App\Repositories\OfferDrawingRepository;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class OfferDrawingService
 {
@@ -16,24 +17,19 @@ class OfferDrawingService
 
     public function storeDrawing(Offer $offer, UploadedFile $file): OfferDrawing
     {
-        $year = now()->year;
+        $year     = now()->year;
         $basePath = config('offer_drawings.base_path');
-        $filename = $file->getClientOriginalName();
 
-        // Full path to external /storage folder (not inside Laravel)
-        $destinationPath = base_path("../storage/{$basePath}/{$year}");
+        $name      = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = $file->getClientOriginalExtension();
+        $filename  = Str::slug($name) . '.' . $extension;
 
-        // Create folder if not exists
-        if (!file_exists($destinationPath)) {
-            mkdir($destinationPath, 0755, true);
-        }
-
-        // Move the uploaded file to external storage
-        $file->move($destinationPath, $filename);
+        $relativePath = "{$basePath}/{$year}";
+        Storage::disk('public')->putFileAs($relativePath, $file, $filename);
 
         return $this->repository->create([
-            'offer_id' => $offer->id,
-            'filename' => $filename,
+            'offer_id'    => $offer->id,
+            'filename'    => $filename,
             'upload_date' => now(),
         ]);
     }

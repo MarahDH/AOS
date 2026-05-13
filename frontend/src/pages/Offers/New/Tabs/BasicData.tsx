@@ -39,7 +39,9 @@ const BasicDataTab: FunctionComponent<BasicDataTabProps> = () => {
             </Grid>
             <Grid size={{ xs: 12, md: 2 }}>
               {offerDetails.general_creation_date &&
-                offerDetails.created_by_user && <HistoryCard />}
+              offerDetails.created_by_user ? (
+                <HistoryCard />
+              ) : null}
             </Grid>
           </Grid>
 

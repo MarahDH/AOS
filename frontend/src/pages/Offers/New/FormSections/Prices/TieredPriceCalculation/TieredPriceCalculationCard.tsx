@@ -7,10 +7,20 @@ import { mapStaffelPricedataFromOffer } from ".";
 import { useOfferContext } from "@contexts/OfferProvider";
 import { usePermissions } from "@hooks/usePermissions";
 
-const initValue = (target?: string | null, source?: number | null) => {
-  return target !== undefined && target !== null && target !== ""
-    ? target
-    : source?.toString() ?? "";
+const toFormikString = (v: unknown) =>
+  v === null || v === undefined ? "" : String(v);
+
+const initValue = (target: unknown, source?: unknown) => {
+  if (target !== undefined && target !== null && target !== "") {
+    return String(target);
+  }
+  if (typeof source === "number" && !Number.isNaN(source)) {
+    return source.toString();
+  }
+  if (typeof source === "string" && source !== "") {
+    return source;
+  }
+  return "";
 };
 
 export interface TieredPriceFormValues {
@@ -43,18 +53,22 @@ const TieredPriceCalculationCard = () => {
 
   const formik = useFormik<TieredPriceFormValues>({
     initialValues: {
-      pricing_graduated_calculation_additional_setup_quantity:
-        offerDetails?.pricing_graduated_calculation_additional_setup_quantity ??
-        "",
+      pricing_graduated_calculation_additional_setup_quantity: toFormikString(
+        offerDetails?.pricing_graduated_calculation_additional_setup_quantity
+      ),
 
-      pricing_grad_qtyB_add_hourlyrate:
-        offerDetails?.pricing_grad_qtyB_add_hourlyrate ?? "",
-      pricing_grad_qtyC_add_hourlyrate:
-        offerDetails?.pricing_grad_qtyC_add_hourlyrate ?? "",
-      pricing_grad_qtyD_add_hourlyrate:
-        offerDetails?.pricing_grad_qtyD_add_hourlyrate ?? "",
-      pricing_grad_qtyE_add_hourlyrate:
-        offerDetails?.pricing_grad_qtyE_add_hourlyrate ?? "",
+      pricing_grad_qtyB_add_hourlyrate: toFormikString(
+        offerDetails?.pricing_grad_qtyB_add_hourlyrate
+      ),
+      pricing_grad_qtyC_add_hourlyrate: toFormikString(
+        offerDetails?.pricing_grad_qtyC_add_hourlyrate
+      ),
+      pricing_grad_qtyD_add_hourlyrate: toFormikString(
+        offerDetails?.pricing_grad_qtyD_add_hourlyrate
+      ),
+      pricing_grad_qtyE_add_hourlyrate: toFormikString(
+        offerDetails?.pricing_grad_qtyE_add_hourlyrate
+      ),
 
       // Setup cost fields: initialize with _calculation_additional_setup_costs_total
       pricing_grad_qtyB_add_setupcosts: initValue(

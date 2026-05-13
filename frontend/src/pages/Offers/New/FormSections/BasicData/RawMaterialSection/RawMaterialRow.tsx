@@ -1,4 +1,5 @@
 import ConfirmationDialog from "@components/ConfirmationDialog";
+import React from "react";
 import {
   Autocomplete,
   IconButton,
@@ -48,7 +49,7 @@ interface RawMaterialRowProps {
   }) => void;
 }
 
-const RawMaterialRow = ({
+const RawMaterialRow = React.memo(function RawMaterialRow({
   row,
   baseMaterials,
   rawMaterialRows,
@@ -58,7 +59,7 @@ const RawMaterialRow = ({
   onOpenModal,
   updateDemand,
   handleAddMaterial,
-}: RawMaterialRowProps) => {
+}: RawMaterialRowProps) {
   const { offerDetails, offerId } = useOfferContext();
   const { showError } = useApiErrorHandler();
   const { showSuccess } = useApiSuccessHandler();
@@ -326,7 +327,7 @@ const RawMaterialRow = ({
       />
     </TableRow>
   );
-};
+});
 
 const updateRowField = (
   setRows: React.Dispatch<React.SetStateAction<RawMaterialRowType[]>>,

@@ -35,13 +35,12 @@ export interface RawMaterialRow {
   price?: number;
   price_date?: string;
   absolut_demand?: number;
-
-  // ✅ Newly added fields:
+  // Present on server-returned rows, absent on locally-constructed empty rows
+  id?: number;
+  density?: number;
   _additives_concatenated?: string;
   _additives_price_sum?: number;
-  price_total?: number; // still missing
-
-  // Existing calculated fields
+  price_total?: number;
   _price_minus_discount?: number;
   _price_share?: number;
   _price_minus_discount_share?: number;

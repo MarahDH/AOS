@@ -10,7 +10,7 @@ export const useDrawingEditable = () => {
 
   const isDrawingEditable = () => {
     const role = user?.role?.name.toLowerCase() as Roles;
-    const statusName = offerDetails?.status?.name || null;
+    const statusName = offerDetails?.status || null;
 
     if (!statuses.length) {
       return false; // statuses not loaded yet

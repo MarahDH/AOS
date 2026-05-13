@@ -18,30 +18,24 @@ export const useRawMaterialPricesTable = () => {
   const { showSuccess } = useApiSuccessHandler();
   const queryClient = useQueryClient();
 
-  // Hooks
   const { offerDetails, offerId } = useOfferContext();
   const { updateRawDemanMaterial } = useRawMaterials(offerId!);
 
-  // Permissions
   const { data: editableFields = [] } = useEditableFields(offerId!);
 
-  // Get consolidated data at the hook level
-  const { data: offerData, isLoading: isOfferDataLoading } = useOfferData(offerDetails?.id);
+  const { data: offerData, isLoading: isOfferDataLoading } = useOfferData(offerDetails?.id as number | undefined);
 
-  const isFieldEditable = (fieldName: string) =>
-    editableFields.includes(fieldName);
+  const isFieldEditable = (fieldName: string) => editableFields.includes(fieldName);
 
   const [baseMaterials, setRawMaterials] = useState<any[]>([]);
   const [rawMaterialRows, setRawMaterialRows] = useState<RawMaterialRow[]>([]);
   const [selectedMaterial, setSelectedMaterial] = useState<any | null>(null);
   const [openModal, setOpenModal] = useState(false);
-  // Removed isLoading state - no longer needed since data comes from consolidated query
-  
-  // AbortController for request cancellation
+
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const createEmptyRow = (): RawMaterialRow => ({
-    offer_id: offerDetails?.id || 0,
+    offer_id: (offerDetails?.id as number) || 0,
     raw_material_id: 0,
     supplier: "",
     share: 0,
@@ -55,55 +49,50 @@ export const useRawMaterialPricesTable = () => {
     _price_minus_discount_share: 0,
   });
 
-  // Removed fetchOfferRawMaterials function - data is now handled by useEffect
-
-  // Get raw materials from consolidated data
   useEffect(() => {
     if (offerData?.raw_materials) {
       setRawMaterials(offerData.raw_materials);
     }
   }, [offerData?.raw_materials]);
 
-  const handleAddMaterial = async (newMaterialId: number) => {
-    if (!offerDetails?.id) return;
+  const handleAddMaterial = useCallback(
+    async (newMaterialId: number) => {
+      if (!offerDetails?.id) return;
 
-    // Find the base material to prefill fields
-    const baseMaterial = baseMaterials.find((m) => m.id === newMaterialId);
+      const baseMaterial = baseMaterials.find((m) => m.id === newMaterialId);
 
-    try {
-      const createdMaterial =
-        await OfferRawMaterialCalculatedApi.createRawMaterial({
-          offer_id: offerDetails.id,
+      try {
+        const createdMaterial = await OfferRawMaterialCalculatedApi.createRawMaterial({
+          offer_id: offerDetails.id as number,
           raw_material_id: newMaterialId,
           supplier: baseMaterial?.supplier || "",
           price_date: baseMaterial?.price_date || "",
-          // add other fields if needed
         });
 
-      setRawMaterialRows((prev) =>
-        prev.map((r) =>
-          r.raw_material_id === 0
-            ? {
-                ...createdMaterial,
-                share: r.share,
-                supplier: r.supplier || baseMaterial?.supplier || "",
-                price_date: r.price_date || baseMaterial?.price_date || "",
-                price: r.price,
-                type: r.type,
-              }
-            : r
-        )
-      );
+        setRawMaterialRows((prev) =>
+          prev.map((r) =>
+            r.raw_material_id === 0
+              ? {
+                  ...createdMaterial,
+                  share: r.share,
+                  supplier: r.supplier || baseMaterial?.supplier || "",
+                  price_date: r.price_date || baseMaterial?.price_date || "",
+                  price: r.price,
+                  type: r.type,
+                }
+              : r
+          )
+        );
 
-      showSuccess("Rohstoff erfolgreich hinzugefügt.");
-      // Invalidate the consolidated offer-data query to refresh all data
-      queryClient.invalidateQueries({ queryKey: ["offer-data", offerDetails.id] });
-    } catch (error) {
-      showError(error);
-    }
-  };
-
-  // Removed debouncedFetch function - no longer needed since data comes from consolidated query
+        showSuccess("Rohstoff erfolgreich hinzugefügt.");
+        queryClient.invalidateQueries({ queryKey: ["offer-data", offerDetails.id] });
+      } catch (error) {
+        showError(error);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [offerDetails?.id, baseMaterials, queryClient]
+  );
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedUpdate = useCallback(
@@ -115,12 +104,9 @@ export const useRawMaterialPricesTable = () => {
         value: any
       ) => {
         try {
-          await OfferRawMaterialCalculatedApi.updateRawMaterial(
-            offerId,
-            rawMaterialId,
-            { [field]: value }
-          );
-          // Invalidate the consolidated offer-data query to refresh all data
+          await OfferRawMaterialCalculatedApi.updateRawMaterial(offerId, rawMaterialId, {
+            [field]: value,
+          });
           queryClient.invalidateQueries({ queryKey: ["offer-data", offerId] });
           showSuccess("Feld erfolgreich gespeichert.");
         } catch (error) {
@@ -129,70 +115,66 @@ export const useRawMaterialPricesTable = () => {
       },
       500
     ),
-    [] // Remove debouncedFetch dependency to prevent recreation
+    []
   );
 
-  const handleUpdateField = (
-    row: RawMaterialRow,
-    field: keyof RawMaterialRow,
-    value: string | number
-  ) => {
-    const currentValue = row[field];
+  const handleUpdateField = useCallback(
+    (row: RawMaterialRow, field: keyof RawMaterialRow, value: string | number) => {
+      if (row[field] === value) return;
 
-    // 🛡️ Only update if the value changed
-    if (currentValue === value) {
-      return;
-    }
+      setRawMaterialRows((prev) =>
+        prev.map((r) =>
+          r.offer_id === row.offer_id && r.raw_material_id === row.raw_material_id
+            ? { ...r, [field]: value }
+            : r
+        )
+      );
 
-    setRawMaterialRows((prev) =>
-      prev.map((r) =>
-        r.offer_id === row.offer_id && r.raw_material_id === row.raw_material_id
-          ? { ...r, [field]: value }
-          : r
-      )
-    );
+      if (row.offer_id && row.raw_material_id) {
+        debouncedUpdate(row.offer_id, row.raw_material_id, field, value);
+      }
+    },
+    [debouncedUpdate]
+  );
 
-    if (row.offer_id && row.raw_material_id) {
-      debouncedUpdate(row.offer_id, row.raw_material_id, field, value);
-    }
-  };
-
-  const handleChangeMaterial = async (
-    row: RawMaterialRow,
-    newMaterialId: number
-  ) => {
-    try {
-      await OfferRawMaterialCalculatedApi.updateRawMaterial(
-        row.offer_id,
-        row.raw_material_id,
-        {
+  const handleChangeMaterial = useCallback(
+    async (row: RawMaterialRow, newMaterialId: number) => {
+      try {
+        await OfferRawMaterialCalculatedApi.updateRawMaterial(row.offer_id, row.raw_material_id, {
           raw_material_id: newMaterialId,
+        });
+        queryClient.invalidateQueries({ queryKey: ["offer-data", row.offer_id] });
+      } catch (error) {
+        showError(error);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [queryClient]
+  );
+
+  const handleOpenModal = useCallback(
+    async (row: RawMaterialRow) => {
+      if (!row.raw_material_id) return;
+
+      try {
+        const cacheKey = ["additives-for-rm", row.offer_id, row.raw_material_id] as const;
+
+        // Use cached result when available — avoids a network round-trip on repeated opens
+        let additives = queryClient.getQueryData<any[]>(cacheKey);
+        if (!additives) {
+          additives = await AdditiveApi.getAdditivesForRawMaterial(row.offer_id, row.raw_material_id);
+          queryClient.setQueryData(cacheKey, additives);
         }
-      );
-      // Invalidate the consolidated offer-data query to refresh all data
-      queryClient.invalidateQueries({ queryKey: ["offer-data", row.offer_id] });
-    } catch (error) {
-      showError(error);
-    }
-  };
 
-  const handleOpenModal = async (row: RawMaterialRow) => {
-    try {
-      const response = await AdditiveApi.getAdditivesForRawMaterial(
-        row.offer_id,
-        row.raw_material_id
-      );
-      const additives = response;
-      setSelectedMaterial({
-        ...row,
-        additives: additives,
-      });
-
-      setOpenModal(true);
-    } catch (error) {
-      showError(error);
-    }
-  };
+        setSelectedMaterial({ ...row, additives });
+        setOpenModal(true);
+      } catch (error) {
+        showError(error);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [queryClient]
+  );
 
   const formik = useFormik<any>({
     initialValues: {
@@ -210,59 +192,45 @@ export const useRawMaterialPricesTable = () => {
     onSubmit: () => {},
   });
 
-  // Calculate totals from the actual data source
   const totalPriceShare = useMemo(() => {
     if (!offerData?.raw_materials_calculated) return 0;
-    const result = offerData.raw_materials_calculated.reduce(
+    return offerData.raw_materials_calculated.reduce(
       (sum, row) => sum + (parseFloat(String(row._price_share)) || 0),
       0
     );
-    console.log("Calculating totalPriceShare:", result, "from data:", offerData.raw_materials_calculated);
-    return result;
   }, [offerData?.raw_materials_calculated]);
 
   const totalDemand = useMemo(() => {
     if (!offerData?.raw_materials_calculated) return 0;
-    const result = offerData.raw_materials_calculated.reduce(
+    return offerData.raw_materials_calculated.reduce(
       (sum, row) => sum + (parseFloat(String(row.absolut_demand)) || 0),
       0
     );
-    console.log("Calculating totalDemand:", result, "from data:", offerData.raw_materials_calculated);
-    return result;
   }, [offerData?.raw_materials_calculated]);
 
-  // Update formik values when offerData or totalPriceShare changes
   useEffect(() => {
     if (offerData) {
-      // Type assertion to handle the new fields we added to the backend
       const data = offerData as any;
       formik.setFieldValue("general_raw_material_purchase_discount", data.general_raw_material_purchase_discount ?? "");
-      
-      // For the overwritten field, prioritize the saved value from offerDetails (backend)
-      // Only use calculated totalPriceShare as fallback if no saved value exists
-      // This preserves manually entered values when switching tabs
+
       const savedValue = offerDetails?.general_raw_material_price_total_overwritten;
       if (savedValue !== null && savedValue !== undefined && savedValue !== "") {
-        console.log("Updating formik with saved backend value:", savedValue);
         formik.setFieldValue("general_raw_material_price_total_overwritten", savedValue);
       } else if (totalPriceShare !== undefined && totalPriceShare !== null) {
-        console.log("Updating formik with calculated totalPriceShare:", totalPriceShare);
         formik.setFieldValue("general_raw_material_price_total_overwritten", totalPriceShare);
       } else {
-        console.log("Updating formik with empty value");
         formik.setFieldValue("general_raw_material_price_total_overwritten", "");
       }
     }
   }, [offerData, totalPriceShare, offerDetails]);
 
-  // Update raw material rows when consolidated data changes
   useEffect(() => {
     if (offerData?.raw_materials_calculated) {
       const res = offerData.raw_materials_calculated;
       if (res.length === 0) {
         setRawMaterialRows([createEmptyRow()]);
       } else {
-        const filledRows = [...res];
+        const filledRows: RawMaterialRow[] = [...res];
         while (filledRows.length < 4) {
           filledRows.push(createEmptyRow());
         }
@@ -271,17 +239,14 @@ export const useRawMaterialPricesTable = () => {
     }
   }, [offerData?.raw_materials_calculated]);
 
-  // Cleanup function to cancel requests and debounced functions
   useEffect(() => {
     return () => {
-      // Cancel any pending requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-      // Cancel debounced functions
       debouncedUpdate.cancel();
     };
-  }, []); // Remove dependencies to prevent recreation
+  }, []);
 
   return {
     formik,

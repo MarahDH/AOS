@@ -8,6 +8,7 @@ use App\Http\Resources\ApiResponse;
 use App\Http\Resources\OfferDrawingResource;
 use App\Models\Offer;
 use App\Services\OfferDrawingService;
+use Illuminate\Support\Facades\Storage;
 
 class OfferDrawingController extends BaseController
 {
@@ -23,6 +24,29 @@ class OfferDrawingController extends BaseController
             new OfferDrawingResource($drawing),
             'Drawing uploaded successfully'
         );
+    }
+
+    public function file(int $id)
+    {
+        $offer   = Offer::findOrFail($id);
+        $drawing = $this->service->getLatestDrawing($offer);
+
+        if (!$drawing) {
+            return ApiResponse::error('Keine Zeichnung gefunden.', 404);
+        }
+
+        $basePath = config('offer_drawings.base_path');
+        $year     = $drawing->upload_date->format('Y');
+        $path     = "{$basePath}/{$year}/{$drawing->filename}";
+
+        if (!Storage::disk('public')->exists($path)) {
+            return ApiResponse::error('Datei nicht gefunden.', 404);
+        }
+
+        return Storage::disk('public')->response($path, $drawing->filename, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $drawing->filename . '"',
+        ]);
     }
 
     public function show(string $id = null)

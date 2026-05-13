@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class OfferDrawing extends Model
 {
@@ -18,10 +19,9 @@ class OfferDrawing extends Model
     public function getPreviewUrlAttribute(): string
     {
         $basePath = config('offer_drawings.base_path');
+        $year     = $this->upload_date ? $this->upload_date->format('Y') : now()->year;
 
-        $year = $this->upload_date ? $this->upload_date->format('Y') : now()->year;
-
-        return asset("storage/{$basePath}/{$year}/{$this->filename}");
+        return Storage::disk('public')->url("{$basePath}/{$year}/{$this->filename}");
     }
 
     public function offer()

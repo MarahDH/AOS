@@ -14,9 +14,9 @@ class OfferService
 {
     public function __construct(private OfferRepository $repository) {}
 
-    public function getAllSummary()
+    public function getAllSummary(string $sortBy = 'general_offer_number', string $sortDir = 'asc', string $search = '')
     {
-        return $this->repository->getAllSummarized();
+        return $this->repository->getAllSummarized($sortBy, $sortDir, $search);
     }
 
     public function getOfferById(int $id): OfferCalculated

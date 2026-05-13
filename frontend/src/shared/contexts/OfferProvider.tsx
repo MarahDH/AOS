@@ -1,13 +1,14 @@
 import { createContext, ReactNode, useContext, useState } from "react";
+import { OfferDetailModel } from "@interfaces/Offers.model";
 
 type OfferContextType = {
   offerId: number | null;
-  offerDetails: any;
+  offerDetails: OfferDetailModel | Record<string, never>;
   isLoadingOfferDetails: boolean;
   drawingFile: File | null;
   setDrawingFile: (file: File | null) => void;
   setOfferId: (id: number) => void;
-  setOfferData: (data: any) => void;
+  setOfferData: (data: OfferDetailModel | Record<string, never>) => void;
   setIsLoadingOfferDetails: (loading: boolean) => void;
   resetOffer: () => void;
 };
@@ -16,7 +17,7 @@ const OfferContext = createContext<OfferContextType | undefined>(undefined);
 
 export const OfferProvider = ({ children }: { children: ReactNode }) => {
   const [offerId, setOfferId] = useState<number | null>(null);
-  const [offerDetails, setOfferData] = useState<any>({});
+  const [offerDetails, setOfferData] = useState<OfferDetailModel | Record<string, never>>({});
   const [drawingFile, setDrawingFile] = useState<File | null>(null);
   const [isLoadingOfferDetails, setIsLoadingOfferDetails] =
     useState<boolean>(true);

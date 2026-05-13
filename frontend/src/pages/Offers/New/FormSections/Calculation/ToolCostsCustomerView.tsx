@@ -8,9 +8,12 @@ const ToolCostsCustomerView = () => {
   const { canEdit } = usePermissions();
   const isEditable = canEdit("calculation");
 
-  const customerCosts =
-    offerDetails.calculation_working_tool_costs_customer ?? 0;
-  const totalCosts = offerDetails.calculation_working_tool_costs_total ?? 1;
+  const customerCosts = Number(
+    offerDetails.calculation_working_tool_costs_customer ?? 0
+  );
+  const totalCosts = Number(
+    offerDetails.calculation_working_tool_costs_total ?? 1
+  );
   const percent =
     totalCosts && customerCosts
       ? `(${((customerCosts / totalCosts) * 100).toFixed(2)} %)`

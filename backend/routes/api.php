@@ -58,6 +58,7 @@ Route::middleware(['auth:api'])->group(function () {
         Route::delete('{offerId}/raw-materials/{rawMaterialId}', [OfferRawMaterialCalculatedController::class, 'destroy'])->middleware('check.permission:' . PermissionConstants::DELETE_OFFER_RAW_MATERIAL);;
         // Drawings
         Route::get('{id}/drawing', [OfferDrawingController::class, 'show'])->middleware('check.permission:' . PermissionConstants::VIEW_DRAWING);
+        Route::get('{id}/drawing/file', [OfferDrawingController::class, 'file'])->middleware('check.permission:' . PermissionConstants::VIEW_DRAWING);
         Route::post('{id}/drawing', [OfferDrawingController::class, 'store'])->middleware('check.permission:' . PermissionConstants::CREATE_DRAWING);
         //Export Offer
         Route::get('{id}/export', [OfferExportController::class, 'export'])->middleware('check.permission:' . PermissionConstants::EXPORT_OFFER);

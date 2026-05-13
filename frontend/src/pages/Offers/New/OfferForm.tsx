@@ -5,13 +5,14 @@ import CalculationTab from "./Tabs/Calculation";
 import PricesTab from "./Tabs/Prices";
 import DrawingTab from "./Tabs/Drawing";
 import ProcessSheetTab from "./Tabs/ProcessSheet";
-import { Box, CircularProgress, Tab, Tabs } from "@mui/material";
+import { Box, CircularProgress, LinearProgress, Tab, Tabs } from "@mui/material";
 import { FormikProvider, useFormik } from "formik";
 import { initialValues } from "./Index";
 import { useParams } from "react-router-dom";
 import { useOfferContext } from "@contexts/OfferProvider";
 import { OffersApi } from "@api/offers";
 import { usePermissions } from "@hooks/usePermissions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type OfferFormProps = object;
 
@@ -44,83 +45,92 @@ const allTabs = [
 ];
 
 const OfferForm: FunctionComponent<OfferFormProps> = () => {
-  // Hooks
   const { id } = useParams();
   const {
     setOfferId,
     setOfferData,
     resetOffer,
     setIsLoadingOfferDetails,
-    isLoadingOfferDetails,
   } = useOfferContext();
   const { canView } = usePermissions();
+  const queryClient = useQueryClient();
+
+  const numericId = id ? Number(id) : undefined;
   const tabs = allTabs.filter((tab) => canView(tab.permission.subject));
 
-  // State
   const [selectedTab, setSelectedTab] = useState(() => {
     const saved = localStorage.getItem("offer_form_selected_tab");
     return saved !== null ? Number(saved) : 0;
   });
+  const [visitedTabs, setVisitedTabs] = useState<Set<number>>(
+    () =>
+      new Set([
+        localStorage.getItem("offer_form_selected_tab") !== null
+          ? Number(localStorage.getItem("offer_form_selected_tab"))
+          : 0,
+      ])
+  );
   const previousTabRef = useRef<number>(selectedTab);
 
-  const isNew = !id;
+  // Single source of truth for the offer object — shared with useSaveFieldMutation via cache key ["offer", id]
+  const { data: offerQueryData, isLoading: isOfferLoading, isFetching: isOfferFetching } = useQuery({
+    queryKey: ["offer", numericId],
+    queryFn: () => OffersApi.getOfferById(numericId!),
+    enabled: !!numericId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Background refetch indicator — shown as a thin progress bar, no full spinner
+  const isSilentRefreshing = isOfferFetching && !isOfferLoading;
 
   const formik = useFormik({
     initialValues,
     onSubmit: () => {},
   });
 
-  // Functions
-  const loadOffer = async () => {
-    try {
-      setIsLoadingOfferDetails(true); // 🛡️ Start spinner
-
-      if (id) {
-        const res = await OffersApi.getOfferById(Number(id));
-        setOfferId(res.id);
-        setOfferData(res);
-      } else {
-        resetOffer();
-      }
-    } catch (err) {
-      console.error("Failed to load offer", err);
-    } finally {
+  // Sync React Query data into OfferProvider so all child components stay consistent
+  useEffect(() => {
+    if (!numericId) {
+      resetOffer();
+      setIsLoadingOfferDetails(false);
+      return;
+    }
+    if (offerQueryData) {
+      setOfferId(offerQueryData.id);
+      setOfferData(offerQueryData);
       setIsLoadingOfferDetails(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offerQueryData, numericId]);
 
+  // Clean up persisted tab selection when leaving the form
   useEffect(() => {
-    setIsLoadingOfferDetails(true); // 🛡️ Always start loading first
-
-    if (!isNew) {
-      loadOffer();
-    } else {
-      resetOffer();
-      setIsLoadingOfferDetails(false); // 🛡️ manually stop loading after reset
-    }
-
     return () => localStorage.removeItem("offer_form_selected_tab");
   }, [id]);
 
-  // Refetch offer when switching to Prices tab to ensure calculated values are up-to-date
-  // This is especially important after setting up calculation fields, as backend initialization
-  // may have updated graduated pricing fields that affect Prices tab calculations
+  // When switching from Calculation → Prices, the backend has already recalculated
+  // graduated pricing values. Invalidate both cache keys so the Prices tab shows fresh data.
   useEffect(() => {
-    if (!isNew && id && selectedTab !== previousTabRef.current) {
-      const pricesTabIndex = tabs.findIndex((tab) => tab.label === "Preise");
-      
-      // Only refetch when switching TO the Prices tab (not when already on it or leaving it)
-      if (pricesTabIndex !== -1 && selectedTab === pricesTabIndex && previousTabRef.current !== pricesTabIndex) {
-        loadOffer();
-      }
-      
-      previousTabRef.current = selectedTab;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTab, id, isNew]);
+    if (!numericId || selectedTab === previousTabRef.current) return;
 
-  // 🛡️ Show spinner if loading
-  if (isLoadingOfferDetails) {
+    const pricesTabIndex = tabs.findIndex((tab) => tab.label === "Preise");
+    const calculationTabIndex = tabs.findIndex((tab) => tab.label === "Kalkulation");
+
+    if (
+      pricesTabIndex !== -1 &&
+      selectedTab === pricesTabIndex &&
+      previousTabRef.current === calculationTabIndex
+    ) {
+      queryClient.invalidateQueries({ queryKey: ["offer", numericId] });
+      queryClient.invalidateQueries({ queryKey: ["offer-data", numericId] });
+    }
+
+    previousTabRef.current = selectedTab;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTab, numericId]);
+
+  if (!!numericId && isOfferLoading) {
     return (
       <Box
         display="flex"
@@ -136,12 +146,14 @@ const OfferForm: FunctionComponent<OfferFormProps> = () => {
   return (
     <FormikProvider value={formik}>
       <CardBox label="Aufträge und Angebote" margin="20px">
+        {isSilentRefreshing && <LinearProgress sx={{ mb: 1 }} />}
         <Box>
           <Tabs
             variant="fullWidth"
             value={selectedTab}
             onChange={(_, newValue) => {
               setSelectedTab(newValue);
+              setVisitedTabs((prev) => new Set([...prev, newValue]));
               localStorage.setItem(
                 "offer_form_selected_tab",
                 newValue.toString()
@@ -153,7 +165,13 @@ const OfferForm: FunctionComponent<OfferFormProps> = () => {
             ))}
           </Tabs>
 
-          <Box mt={2}>{tabs[selectedTab].component}</Box>
+          <Box mt={2}>
+            {tabs.map((tab, index) => (
+              <Box key={index} hidden={selectedTab !== index}>
+                {visitedTabs.has(index) ? tab.component : null}
+              </Box>
+            ))}
+          </Box>
         </Box>
       </CardBox>
     </FormikProvider>

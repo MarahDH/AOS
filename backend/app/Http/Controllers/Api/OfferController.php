@@ -29,9 +29,13 @@ class OfferController extends BaseController
 
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        return ApiResponse::success(new OfferCollection($this->service->getAllSummary()));
+        $sortBy  = $request->query('sort_by', 'general_offer_number');
+        $sortDir = $request->query('sort_dir', 'asc');
+        $search  = $request->query('search_term', '');
+
+        return ApiResponse::success(new OfferCollection($this->service->getAllSummary($sortBy, $sortDir, $search)));
     }
 
     public function show(int $id)

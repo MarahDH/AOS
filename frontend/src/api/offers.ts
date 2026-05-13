@@ -1,35 +1,37 @@
-import { OffersModel } from "@interfaces/Offers.model";
+import { OfferDataResponse, OfferDetailModel, OfferMutationResponse, OffersModel } from "@interfaces/Offers.model";
 import { handleRequest } from "./handler/handleRequest";
 import { axiosInstance } from "./handler/config";
 
 export class OffersApi {
-  static async getAllOffers() {
+  static async getAllOffers(sortBy?: string, sortDir?: "asc" | "desc", searchTerm?: string) {
+    const params = new URLSearchParams();
+    if (sortBy) params.set("sort_by", sortBy);
+    if (sortDir) params.set("sort_dir", sortDir);
+    if (searchTerm) params.set("search_term", searchTerm);
+    const query = params.toString();
     return await handleRequest<OffersModel[]>({
       method: "GET",
-      endpoint: "offers",
+      endpoint: query ? `offers?${query}` : "offers",
     });
   }
 
   static async getOfferById(offerId: number) {
-    return await handleRequest<any>({
+    return await handleRequest<OfferDetailModel>({
       method: "GET",
       endpoint: `offers/${offerId}`,
     });
   }
 
-  static async createOffer(data: any) {
-    return await handleRequest<any>({
+  static async createOffer(data: { field: string; value: unknown }) {
+    return await handleRequest<OfferMutationResponse>({
       method: "POST",
       endpoint: "offers",
       data,
     });
   }
 
-  static async UpdateOffer(
-    offerId: number,
-    offer: { field: string; value: any }
-  ) {
-    return await handleRequest<any>({
+  static async UpdateOffer(offerId: number, offer: { field: string; value: unknown }) {
+    return await handleRequest<OfferMutationResponse>({
       method: "PATCH",
       endpoint: `offers/${offerId}`,
       data: offer,
@@ -49,6 +51,13 @@ export class OffersApi {
       method: "GET",
       endpoint: `offers/${offerId}/drawing`,
     });
+  }
+
+  static async getDrawingBlobUrl(offerId: number): Promise<string> {
+    const response = await axiosInstance.get(`/offers/${offerId}/drawing/file`, {
+      responseType: "blob",
+    });
+    return URL.createObjectURL(response.data);
   }
 
   static async storeDrawing(offerId: number, file: File) {
@@ -109,13 +118,7 @@ export class OffersApi {
   }
 
   static async getOfferData(offerId: number) {
-    return await handleRequest<{
-      editable_fields: string[];
-      offer_statuses: any[];
-      additives: any[];
-      raw_materials: any[];
-      raw_materials_calculated: any[];
-    }>({
+    return await handleRequest<OfferDataResponse>({
       method: "GET",
       endpoint: `offers/${offerId}/data`,
     });

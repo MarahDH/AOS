@@ -9,40 +9,61 @@ import {
   Edit,
   InsertDriveFileRounded,
 } from "@mui/icons-material";
-import { FunctionComponent, useEffect, useState } from "react";
+import { FunctionComponent, useState } from "react";
 import { MTable } from "@components/MTable";
 import { OfferColumns } from "./Columns";
 import { OffersApi } from "@api/offers";
 import { OffersModel } from "@interfaces/Offers.model";
-import { useApiErrorHandler } from "@hooks/useApiErrorHandler";
+import { useApiSuccessHandler } from "@hooks/useApiSuccessHandler";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useOfferContext } from "@contexts/OfferProvider";
 import { usePermissions } from "@hooks/usePermissions";
-import { useApiSuccessHandler } from "@hooks/useApiSuccessHandler";
 import ConfirmationDialog from "@components/ConfirmationDialog";
 import TemplateDialog from "./TemplateDialog";
 
 type OffersPageProps = object;
 
 const OffersPage: FunctionComponent<OffersPageProps> = () => {
-  // Hooks
   const navigate = useNavigate();
-  const { showError } = useApiErrorHandler();
   const { showSuccess } = useApiSuccessHandler();
-
   const { resetOffer } = useOfferContext();
-  const { canEdit, canCreate, canDuplicate, canExport, canDelete } =
-    usePermissions();
+  const { canEdit, canCreate, canDuplicate, canExport, canDelete } = usePermissions();
+  const queryClient = useQueryClient();
 
-  // State
-  const [offers, setOffers] = useState<OffersModel[]>([]);
-  const [loading, setLoading] = useState(false);
   const [exportingOfferId, setExportingOfferId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<OffersModel | null>(null);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [templates, setTemplates] = useState<string[]>([]);
   const [exportOfferId, setExportOfferId] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState("general_offer_number");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Cached list — navigating away and back reuses cached data
+  const { data: offers = [], isLoading } = useQuery({
+    queryKey: ["offers", sortBy, sortDir, searchTerm],
+    queryFn: () => OffersApi.getAllOffers(sortBy, sortDir, searchTerm),
+    staleTime: 60_000,
+    // Keep previous results visible while re-fetching for sort/search changes
+    placeholderData: (prev) => prev,
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: (offerId: number) => OffersApi.duplicateOffer(offerId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["offers"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (offerId: number) => OffersApi.deleteOffer(offerId),
+    onSuccess: () => {
+      showSuccess("Angebot erfolgreich gelöscht");
+      queryClient.invalidateQueries({ queryKey: ["offers"] });
+      setDeleteDialogOpen(false);
+      setSelectedOffer(null);
+    },
+  });
 
   const openTemplateDialog = async (offerId: number) => {
     setExportOfferId(offerId);
@@ -57,9 +78,8 @@ const OffersPage: FunctionComponent<OffersPageProps> = () => {
       setExportingOfferId(exportOfferId);
       try {
         await OffersApi.export(exportOfferId, filename);
-        // Optionally show success or handle file download
-      } catch (error) {
-        showError(error);
+      } catch {
+        // export() already shows error via axiosInstance interceptor
       } finally {
         setExportingOfferId(null);
         setExportOfferId(null);
@@ -72,66 +92,25 @@ const OffersPage: FunctionComponent<OffersPageProps> = () => {
     navigate("/angebote/neu");
   };
 
-  const fetchOffers = async () => {
-    try {
-      setLoading(true);
-      const res = await OffersApi.getAllOffers();
-      setOffers(res);
-    } catch (error) {
-      showError(error);
-    } finally {
-      setLoading(false);
-    }
+  const handleSortChange = (by: string, dir: "asc" | "desc") => {
+    setSortBy(by);
+    setSortDir(dir);
   };
 
-  const handleDuplicate = async (offerId: number) => {
-    try {
-      await OffersApi.duplicateOffer(offerId);
-      await fetchOffers();
-      // navigate(`/angebote/${res.offer.id}`);
-    } catch (error) {
-      showError(error);
-    }
+  const handleSearchChange = (term: string) => {
+    setSearchTerm(term);
   };
-
-  // const handleExport = async (offerId: number) => {
-  //   try {
-  //     setExportingOfferId(offerId);
-  //     await OffersApi.export(offerId);
-
-  //     // ⏳ Wait a little so user can see spinner
-  //     await new Promise((resolve) => setTimeout(resolve, 1000));
-  //   } catch (error) {
-  //     showError(error);
-  //   } finally {
-  //     setExportingOfferId(null);
-  //   }
-  // };
 
   const handleDelete = (offer: OffersModel) => {
     setSelectedOffer(offer);
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = () => {
     if (selectedOffer?.id) {
-      try {
-        await OffersApi.deleteOffer(selectedOffer.id);
-        showSuccess("Angebot erfolgreich gelöscht");
-        await fetchOffers();
-      } catch (error) {
-        showError(error);
-      } finally {
-        setDeleteDialogOpen(false);
-        setSelectedOffer(null);
-      }
+      deleteMutation.mutate(selectedOffer.id);
     }
   };
-
-  //LifeCycles
-  useEffect(() => {
-    fetchOffers();
-  }, []);
 
   return (
     <>
@@ -139,9 +118,13 @@ const OffersPage: FunctionComponent<OffersPageProps> = () => {
         <CardBox label="Aufträge und Angebote">
           <MTable
             data={offers}
-            searchableField="general_customer"
             columns={OfferColumns}
-            loading={loading}
+            loading={isLoading}
+            onSortChange={handleSortChange}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSearchChange={handleSearchChange}
+            paginationResetKey={`${sortBy}-${sortDir}-${searchTerm}`}
             actions={(row) => (
               <>
                 {canExport("offer") && (
@@ -156,12 +139,12 @@ const OffersPage: FunctionComponent<OffersPageProps> = () => {
                 {canDuplicate("offer") && (
                   <IconAction
                     tooltip="Angebot duplizieren"
-                    onClick={() => handleDuplicate(row.id)}
+                    onClick={() => duplicateMutation.mutate(row.id)}
+                    disabled={duplicateMutation.isPending}
                   >
                     <ContentCopy fontSize="small" />
                   </IconAction>
                 )}
-
                 {canEdit("offer") && (
                   <IconAction
                     tooltip="Bearbeiten"
@@ -182,7 +165,6 @@ const OffersPage: FunctionComponent<OffersPageProps> = () => {
             )}
           />
 
-          {/* Add Button */}
           {canCreate("offer") && (
             <RoundedIconButton
               icon={<AddIcon fontSize="small" />}
@@ -191,7 +173,6 @@ const OffersPage: FunctionComponent<OffersPageProps> = () => {
             />
           )}
 
-          {/* Delete Dialog */}
           <ConfirmationDialog
             open={deleteDialogOpen}
             onClose={() => setDeleteDialogOpen(false)}

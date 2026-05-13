@@ -5,8 +5,10 @@ import Grid from "@mui/material/Grid2";
 import {
   Box,
   Button,
+  CircularProgress,
   IconButton,
   InputAdornment,
+  Skeleton,
   TextField,
   Typography,
 } from "@mui/material";
@@ -34,16 +36,26 @@ const DrawingForm: FunctionComponent<DrawingFormProps> = () => {
 
   const [drawing, setDrawing] = useState<Drawing | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [loadingDrawing, setLoadingDrawing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [savedBlobUrl, setSavedBlobUrl] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDrawing = async () => {
     try {
+      setLoadingDrawing(true);
       const res = await OffersApi.getDrawing(offerId!);
       setDrawing(res);
+      if (res) {
+        if (savedBlobUrl) URL.revokeObjectURL(savedBlobUrl);
+        const blobUrl = await OffersApi.getDrawingBlobUrl(offerId!);
+        setSavedBlobUrl(blobUrl);
+      }
     } catch (error: any) {
       console.error(error);
+    } finally {
+      setLoadingDrawing(false);
     }
   };
 
@@ -70,6 +82,7 @@ const DrawingForm: FunctionComponent<DrawingFormProps> = () => {
   };
 
   useEffect(() => {
+    if (!offerId) return;
     fetchDrawing();
   }, [offerId]);
 
@@ -160,15 +173,16 @@ const DrawingForm: FunctionComponent<DrawingFormProps> = () => {
               variant="contained"
               onClick={handleUpload}
               disabled={!drawingFile || uploading || !editable}
+              startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : undefined}
             >
-              Hochladen
+              {uploading ? "Hochladen..." : "Hochladen"}
             </Button>
           </Box>
         </Grid>
       </Grid>
 
       {/* PDF Preview */}
-      {previewUrl ? (
+      {previewUrl && !uploading ? (
         <Box mt={3}>
           <Typography variant="subtitle1" mb={1}>
             Vorschau der ausgewählten Datei:
@@ -178,19 +192,46 @@ const DrawingForm: FunctionComponent<DrawingFormProps> = () => {
             width="100%"
             height="600px"
             style={{ border: "1px solid #ccc" }}
-          ></iframe>
+          />
         </Box>
-      ) : drawing?.preview_url ? (
+      ) : (savedBlobUrl || uploading || loadingDrawing) ? (
         <Box mt={3}>
           <Typography variant="subtitle1" mb={1}>
             Gespeicherte Zeichnung:
           </Typography>
-          <iframe
-            src={drawing.preview_url}
-            width="100%"
-            height="600px"
-            style={{ border: "1px solid #ccc" }}
-          ></iframe>
+          <Box position="relative" width="100%" height="600px">
+            {(uploading || loadingDrawing) && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 2,
+                  bgcolor: "rgba(255,255,255,0.85)",
+                  zIndex: 1,
+                  borderRadius: 1,
+                }}
+              >
+                <CircularProgress size={36} />
+                <Typography variant="body2" color="text.secondary">
+                  {uploading ? "Datei wird hochgeladen..." : "Zeichnung wird geladen..."}
+                </Typography>
+              </Box>
+            )}
+            {savedBlobUrl && !uploading && !loadingDrawing ? (
+              <iframe
+                src={savedBlobUrl}
+                width="100%"
+                height="600px"
+                style={{ border: "1px solid #ccc", display: "block" }}
+              />
+            ) : (
+              <Skeleton variant="rectangular" width="100%" height="600px" sx={{ borderRadius: 1 }} />
+            )}
+          </Box>
         </Box>
       ) : null}
     </CardBox>
